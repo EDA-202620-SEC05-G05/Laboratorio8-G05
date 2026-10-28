@@ -223,8 +223,11 @@ def height(my_rbt):
  
  
 def height_tree(root):
-    """Altura del subárbol: 0 si es vacío, 1 + máx(alturas de hijos) si no."""
+    """Altura del subárbol contada en aristas: un árbol vacío o de un solo
+    nodo tiene altura 0; en otro caso 1 + máx(alturas de los hijos)."""
     if root is None:
+        return 0
+    if root["left"] is None and root["right"] is None:
         return 0
     return 1 + max(height_tree(root["left"]), height_tree(root["right"]))
  
