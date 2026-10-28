@@ -1,5 +1,6 @@
 from DataStructures.Tree import rbt_node as rn
 from DataStructures.List import array_list as al
+from DataStructures.List import single_linked_list as sl
  
 RED = rn.RED
 BLACK = rn.BLACK
@@ -148,7 +149,7 @@ def is_empty(my_rbt):
  
 def key_set(my_rbt):
     """Retorna una lista con todas las llaves, en orden."""
-    key_list = al.new_list()
+    key_list = sl.new_list()
     key_set_tree(my_rbt["root"], key_list)
     return key_list
  
@@ -157,14 +158,14 @@ def key_set_tree(root, key_list):
     """Recorrido in-order que agrega las llaves a key_list."""
     if root is not None:
         key_set_tree(root["left"], key_list)
-        al.add_last(key_list, rn.get_key(root))
+        sl.add_last(key_list, rn.get_key(root))
         key_set_tree(root["right"], key_list)
     return key_list
  
  
 def value_set(my_rbt):
     """Retorna una lista con todos los valores, en el orden de sus llaves."""
-    value_list = al.new_list()
+    value_list = sl.new_list()
     value_set_tree(my_rbt["root"], value_list)
     return value_list
  
@@ -173,7 +174,7 @@ def value_set_tree(root, value_list):
     """Recorrido in-order que agrega los valores a value_list."""
     if root is not None:
         value_set_tree(root["left"], value_list)
-        al.add_last(value_list, rn.get_value(root))
+        sl.add_last(value_list, rn.get_value(root))
         value_set_tree(root["right"], value_list)
     return value_list
  
@@ -268,3 +269,198 @@ def values_range(root, key_initial, key_final, list_values):
     if key < key_final:
         values_range(root["right"], key_initial, key_final, list_values)
     return list_values
+ 
+ 
+# ---------------------------------------------------------------------------
+# Balanceo y eliminación
+# ---------------------------------------------------------------------------
+ 
+def balance(root):
+    """Restaura las propiedades del RBT en el nodo y actualiza su tamaño."""
+    if is_red(root["right"]) and not is_red(root["left"]):
+        root = rotate_left(root)
+    if is_red(root["left"]) and is_red(root["left"]["left"]):
+        root = rotate_right(root)
+    if is_red(root["left"]) and is_red(root["right"]):
+        flip_colors(root)
+    root["size"] = 1 + size_tree(root["left"]) + size_tree(root["right"])
+    return root
+ 
+ 
+def move_red_left(root):
+    """Asume que root es rojo y root.left y root.left.left son negros;
+    hace que root.left o uno de sus hijos sea rojo."""
+    flip_colors(root)
+    if is_red(root["right"]["left"]):
+        root["right"] = rotate_right(root["right"])
+        root = rotate_left(root)
+        flip_colors(root)
+    return root
+ 
+ 
+def move_red_right(root):
+    """Asume que root es rojo y root.right y root.right.left son negros;
+    hace que root.right o uno de sus hijos sea rojo."""
+    flip_colors(root)
+    if is_red(root["left"]["left"]):
+        root = rotate_right(root)
+        flip_colors(root)
+    return root
+ 
+ 
+def delete_min(my_rbt):
+    """Elimina la pareja con la llave más pequeña."""
+    if my_rbt["root"] is None:
+        return my_rbt
+    root = my_rbt["root"]
+    if not is_red(root["left"]) and not is_red(root["right"]):
+        rn.change_color(root, RED)
+    my_rbt["root"] = delete_min_tree(root)
+    if my_rbt["root"] is not None:
+        rn.change_color(my_rbt["root"], BLACK)
+    return my_rbt
+ 
+ 
+def delete_min_tree(root):
+    """Elimina recursivamente el nodo con la llave más pequeña."""
+    if root["left"] is None:
+        return None
+    if not is_red(root["left"]) and not is_red(root["left"]["left"]):
+        root = move_red_left(root)
+    root["left"] = delete_min_tree(root["left"])
+    return balance(root)
+ 
+ 
+def delete_max(my_rbt):
+    """Elimina la pareja con la llave más grande."""
+    if my_rbt["root"] is None:
+        return my_rbt
+    root = my_rbt["root"]
+    if not is_red(root["left"]) and not is_red(root["right"]):
+        rn.change_color(root, RED)
+    my_rbt["root"] = delete_max_tree(root)
+    if my_rbt["root"] is not None:
+        rn.change_color(my_rbt["root"], BLACK)
+    return my_rbt
+ 
+ 
+def delete_max_tree(root):
+    """Elimina recursivamente el nodo con la llave más grande."""
+    if is_red(root["left"]):
+        root = rotate_right(root)
+    if root["right"] is None:
+        return None
+    if not is_red(root["right"]) and not is_red(root["right"]["left"]):
+        root = move_red_right(root)
+    root["right"] = delete_max_tree(root["right"])
+    return balance(root)
+ 
+ 
+def remove(my_rbt, key):
+    """Elimina la pareja con la llave dada (si existe)."""
+    if not contains(my_rbt, key):
+        return my_rbt
+    root = my_rbt["root"]
+    if not is_red(root["left"]) and not is_red(root["right"]):
+        rn.change_color(root, RED)
+    my_rbt["root"] = remove_key(root, key)
+    if my_rbt["root"] is not None:
+        rn.change_color(my_rbt["root"], BLACK)
+    return my_rbt
+ 
+ 
+def remove_key(root, key):
+    """Elimina recursivamente la llave del subárbol (debe existir)."""
+    if default_compare(key, root) < 0:
+        if not is_red(root["left"]) and not is_red(root["left"]["left"]):
+            root = move_red_left(root)
+        root["left"] = remove_key(root["left"], key)
+    else:
+        if is_red(root["left"]):
+            root = rotate_right(root)
+        if default_compare(key, root) == 0 and root["right"] is None:
+            return None
+        if not is_red(root["right"]) and not is_red(root["right"]["left"]):
+            root = move_red_right(root)
+        if default_compare(key, root) == 0:
+            min_node = get_min_node(root["right"])
+            root["key"] = min_node["key"]
+            root["value"] = min_node["value"]
+            root["right"] = delete_min_tree(root["right"])
+        else:
+            root["right"] = remove_key(root["right"], key)
+    return balance(root)
+ 
+ 
+# ---------------------------------------------------------------------------
+# Consultas por orden: floor, ceiling, rank, select
+# ---------------------------------------------------------------------------
+ 
+def floor(my_rbt, key):
+    """Mayor llave menor o igual a key (None si no existe)."""
+    return floor_key(my_rbt["root"], key)
+ 
+ 
+def floor_key(root, key):
+    if root is None:
+        return None
+    cmp = default_compare(key, root)
+    if cmp == 0:
+        return root["key"]
+    if cmp < 0:
+        return floor_key(root["left"], key)
+    candidate = floor_key(root["right"], key)
+    if candidate is not None:
+        return candidate
+    return root["key"]
+ 
+ 
+def ceiling(my_rbt, key):
+    """Menor llave mayor o igual a key (None si no existe)."""
+    return ceiling_key(my_rbt["root"], key)
+ 
+ 
+def ceiling_key(root, key):
+    if root is None:
+        return None
+    cmp = default_compare(key, root)
+    if cmp == 0:
+        return root["key"]
+    if cmp > 0:
+        return ceiling_key(root["right"], key)
+    candidate = ceiling_key(root["left"], key)
+    if candidate is not None:
+        return candidate
+    return root["key"]
+ 
+ 
+def rank(my_rbt, key):
+    """Número de llaves estrictamente menores que key."""
+    return rank_key(my_rbt["root"], key)
+ 
+ 
+def rank_key(root, key):
+    if root is None:
+        return 0
+    cmp = default_compare(key, root)
+    if cmp < 0:
+        return rank_key(root["left"], key)
+    if cmp > 0:
+        return 1 + size_tree(root["left"]) + rank_key(root["right"], key)
+    return size_tree(root["left"])
+ 
+ 
+def select(my_rbt, pos):
+    """Llave de rango pos (0 = la más pequeña); None si pos es inválida."""
+    return select_key(my_rbt["root"], pos)
+ 
+ 
+def select_key(root, pos):
+    if root is None:
+        return None
+    left_size = size_tree(root["left"])
+    if left_size > pos:
+        return select_key(root["left"], pos)
+    if left_size < pos:
+        return select_key(root["right"], pos - left_size - 1)
+    return root["key"]
