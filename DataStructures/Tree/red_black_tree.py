@@ -206,6 +206,16 @@ def get_max_node(root):
     return get_max_node(root["right"])
  
  
+def left_key(my_rbt):
+    """Llave más pequeña del árbol (alias de get_min)."""
+    return get_min(my_rbt)
+ 
+ 
+def right_key(my_rbt):
+    """Llave más grande del árbol (alias de get_max)."""
+    return get_max(my_rbt)
+ 
+ 
 def height(my_rbt):
     """Retorna la altura del árbol."""
     return height_tree(my_rbt["root"])
